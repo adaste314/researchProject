@@ -128,7 +128,7 @@ for i in test_posts:
     if i in d_posts:
         data.append((predict, 1))
     else:
-        data.append(predict, 0)
+        data.append((predict, 0))
 
 print(f"DATA TIME: {time.time() - t}")
 
