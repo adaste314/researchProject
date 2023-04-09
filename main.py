@@ -10,61 +10,33 @@ import time
 
 nltk.download('words')
 
-while True:
-    page_number = 0
-    d_posts = []
-    page, last_page = 0, -1
-
-    t = time.time()
-
-    while page != last_page:
-        page = req.get("https://www.psychforums.com:443/borderline-personality/?start=" + str(page_number)).text
-        parser = bs(page, 'html.parser')
-        d_posts += list(parser.find(id="wrap").find_all("li", class_="row bg1")) + list(parser.find(id="wrap").find_all("li", class_="row bg2"))
-        page_number += 40
-        last_page = req.get("https://www.psychforums.com:443/borderline-personality/?start=" + str(page_number - 40)).text
-
-    print(f"BORDERLINE PERSONALITY TIME: {time.time() - t}")
-    t = time.time()
-
-    page_number = 0
-    page, last_page = 0, -1
-    while page != last_page:
-        page = req.get("https://www.psychforums.com:443/antisocial-personality/?start=" + str(page_number)).text
-        parser = bs(page, 'html.parser')
-        d_posts += list(parser.find(id="wrap").find_all("li", class_="row bg1")) + list(parser.find(id="wrap").find_all("li", class_="row bg2"))
-        page_number += 40
-        last_page = req.get("https://www.psychforums.com:443/antisocial-personality/?start=" + str(page_number - 40)).text
-
-    print(f"ANTISOCIAL PERSONALITY TIME: {time.time() - t}")
-
-    try:
-        d_posts = random.sample([str(i).split('href="')[1].split('"')[0] for i in d_posts], 5)
-        break
-    except:
-        continue
-
 t = time.time()
 
-while True:
-    page_number = 0
-    und_posts = []
-    # page, last_page = 0, -1
-    # while page != last_page:
-    for i in range(82):
-        page = req.get("https://www.gardening-forums.com/forums/general-gardening-talk.5/page-" + str(i)).text
-        parser = bs(page, 'html.parser')
-        und_posts += list(parser.find(id="top").find_all("div", class_="structItem-title"))
-        # last_page = req.get("https://www.gardening-forums.com/forums/general-gardening-talk.5/page-" + str(page_number)).text
-        # page_number += 1
+d_posts = []
+#pages_total = 250 # Number of pages of interest across both forums
+pages_total = 10
 
-    try:
-        und_posts = random.sample([str(i).split('href="')[1].split('"')[0] for i in und_posts], 5)
-        break
-    except:
-        continue
+for i in range(pages_total):
+    page = req.get("https://www.psychforums.com:443/borderline-personality/?start=" + str(i * 40)).text
+    parser = bs(page, 'html.parser')
+    d_posts += list(parser.find(id="wrap").find_all("li", class_="row bg1")) + list(parser.find(id="wrap").find_all("li", class_="row bg2"))
 
-print(f"GARDENING TIME: {time.time() - t}")
+    page = req.get("https://www.psychforums.com:443/antisocial-personality/?start=" + str(i * 40)).text
+    parser = bs(page, 'html.parser')
+    d_posts += list(parser.find(id="wrap").find_all("li", class_="row bg1")) + list(parser.find(id="wrap").find_all("li", class_="row bg2"))
+
+d_posts = random.sample([str(i).split('href="')[1].split('"')[0] for i in d_posts], 5)
+print(f"DIAGNOSED TIME: {time.time() - t} seconds")
+t = time.time()
+
+und_posts = []
+for i in range(10):
+    page = req.get("https://www.gardening-forums.com/forums/general-gardening-talk.5/page-" + str(i)).text
+    parser = bs(page, 'html.parser')
+    und_posts += list(parser.find(id="top").find_all("div", class_="structItem-title"))
+
+und_posts = random.sample([str(i).split('href="')[1].split('"')[0] for i in und_posts], 5)
+print(f"UNDIAGNOSED TIME: {time.time() - t}")
 t = time.time()
 
 for i in d_posts:
@@ -80,10 +52,18 @@ all_posts = d_posts + und_posts
 for i in all_posts:
     words += i.split(" ")
 
-print(f"CONTENT TIME: {time.time() - t}")
+print(f"CONTENT TIME: {time.time() - t} seconds; number of words is {len(words)}")
+
 t = time.time()
 
-words = collections.Counter([re.sub('[^A-Za-z0-9]+', '', i.lower()) for i in words if re.sub('[^A-Za-z0-9]+', '', i.lower()) in set(wds.words()) and len(re.sub('[^A-Za-z0-9]+', '', i.lower())) >= 3])
+english_words = set(wds.words())
+clean_words = [''.join(filter(str.isalpha, word)) for word in words]
+filtered_words = [i for i in clean_words if i in english_words]
+word_freq = {word: filtered_words.count(word) for word in filtered_words}
+print(f"WORD TIME: {time.time() - t}")
+
+# Tested up to this line
+
 total = len(words)
 for i in words:
     words.update({i: (words[i] / total) - words[i]})
@@ -105,7 +85,7 @@ for i in train_posts:
     else:
         actual = 0
 
-    sigmoid_der = (round(math.exp(predict), 16) / (round(math.exp(predict), 16) + 1)) * (1 - round(math.exp(predict), 16) / round(math.exp(predict), 16) + 1)
+    sigmoid_der = (math.exp(predict) / (math.exp(predict) + 1)) * (1 - math.exp(predict) / math.exp(predict) + 1)
     if actual < predict:
         for word in i.split(" "):
             if word in words:
