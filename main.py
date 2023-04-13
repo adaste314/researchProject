@@ -12,7 +12,7 @@ t = time.time()
 
 d_posts, und_posts = [], []
 pages_total = 50
-sample_size = 100
+sample_size = 1000
 
 for i in range(pages_total):
     page = req.get("https://www.psychforums.com:443/borderline-personality/?start=" + str(i * 40)).text
@@ -61,8 +61,6 @@ words = {word: filtered_words.count(word) / len(filtered_words) for word in filt
 print(f"WORD TIME: {time.time() - t} seconds; number of words is {len(words)}")
 t = time.time()
 
-print(words)
-
 train_posts = random.sample(all_posts, int(.8 * len(all_posts)))
 test_posts = [i for i in all_posts if i not in train_posts]
 
@@ -77,15 +75,19 @@ for i in train_posts:
     else:
         actual = 0
 
-    sigmoid_der = (math.exp(predict) / (math.exp(predict) + 1)) * ((1 - math.exp(predict)) / math.exp(predict) + 1)
-    if actual < predict:
-        for word in i.split(" "):
+    # print(predict, " | ", actual)
+    sigmoid_der = (math.exp(-1 * predict) / (math.exp(-1 * predict) + 1)) * ((1 - math.exp(-1 * predict)) / math.exp(-1 * predict) + 1)
+    for word in i.split(" "):
+        if actual < predict:
             if word in words:
                 words[word] -= sigmoid_der
-    else:
-        for word in i.split(" "):
+                if words[word] < 0:
+                    words[word] = 0
+        else:
             if word in words:
-                words[word] -= sigmoid_der
+                words[word] += sigmoid_der
+                if words[word] > 1:
+                    words[word] = 1
 
 print(f"TRAIN TIME: {time.time() - t}")
 t = time.time()
@@ -104,5 +106,12 @@ for i in test_posts:
 
 print(f"DATA TIME: {time.time() - t}")
 
+correct = 0
 for i in data:
-    print(f"Prediction: {i[0]} | True Value: {i[1]}")
+    if i[0] == i[1]:
+        print(f"Prediction: {i[0]} | True Value: {i[1]} | Correct")
+        correct += 1
+    else:
+        print(f"Prediction: {i[0]} | True Value: {i[1]} | Incorrect")
+
+print(f"Percent correct: {correct / len(data) * 100}%")
