@@ -4,15 +4,14 @@ import random
 import nltk.corpus
 from nltk.corpus import words as wds
 import math
-import time
+import scipy.stats as stats
+import numpy as np
 
 nltk.download('words')
 
-t = time.time()
-
 d_posts, und_posts = [], []
 pages_total = 50
-sample_size = 1000
+sample_size = 2000
 
 for i in range(pages_total):
     page = req.get("https://www.psychforums.com:443/borderline-personality/?start=" + str(i * 40)).text
@@ -32,8 +31,7 @@ for i in range(pages_total):
 d_posts = random.sample([str(i).split('href="')[1].split('"')[0] for i in d_posts], sample_size)
 und_posts = random.sample([str(i).split('href="')[1].split('"')[0] for i in und_posts], sample_size)
 
-print(f"POST TIME: {time.time() - t} seconds")
-t = time.time()
+print(f"POSTS TAKEN: {len(d_posts) + len(und_posts)}")
 
 for i in d_posts:
     parser = bs(req.get(i).text, 'html.parser')
@@ -48,8 +46,7 @@ all_posts = d_posts + und_posts
 for i in all_posts:
     words += i.split(" ")
 
-print(f"CONTENT TIME: {time.time() - t} seconds; number of words is {len(words)}")
-t = time.time()
+print(f"UNFILTERED WORDS: {len(words)}")
 
 english_words = set(wds.words())
 common_words = ['am', 'is', 'are', 'was', 'were', 'being', 'been', 'and', 'be', 'have', 'has', 'had', 'do', 'does',
@@ -58,8 +55,7 @@ clean_words = [''.join(filter(str.isalpha, word)) for word in words]
 filtered_words = [i.lower() for i in clean_words if i.lower() in english_words and i.lower() not in common_words]
 words = {word: filtered_words.count(word) / len(filtered_words) for word in filtered_words}
 
-print(f"WORD TIME: {time.time() - t} seconds; number of words is {len(words)}")
-t = time.time()
+print(f"FILTERED WORDS: {len(words)}")
 
 train_posts = random.sample(all_posts, int(.8 * len(all_posts)))
 test_posts = [i for i in all_posts if i not in train_posts]
@@ -75,7 +71,6 @@ for i in train_posts:
     else:
         actual = 0
 
-    # print(predict, " | ", actual)
     sigmoid_der = (math.exp(-1 * predict) / (math.exp(-1 * predict) + 1)) * ((1 - math.exp(-1 * predict)) / math.exp(-1 * predict) + 1)
     for word in i.split(" "):
         if actual < predict:
@@ -89,9 +84,6 @@ for i in train_posts:
                 if words[word] > 1:
                     words[word] = 1
 
-print(f"TRAIN TIME: {time.time() - t}")
-t = time.time()
-
 data = []
 for i in test_posts:
     predict = 1
@@ -104,14 +96,33 @@ for i in test_posts:
     else:
         data.append((predict, 0))
 
-print(f"DATA TIME: {time.time() - t}")
-
 correct = 0
+predicted_und = 0
+predicted_d = 0
+actual_und = 0
+actual_d = 0
 for i in data:
     if i[0] == i[1]:
-        print(f"Prediction: {i[0]} | True Value: {i[1]} | Correct")
         correct += 1
-    else:
-        print(f"Prediction: {i[0]} | True Value: {i[1]} | Incorrect")
+
+    if i[0]:
+        predicted_d += 1
+    elif not i[0]:
+        predicted_und += 1
+
+    if i[1]:
+        actual_d += 1
+    elif not i[1]:
+        actual_und += 1
 
 print(f"Percent correct: {correct / len(data) * 100}%")
+print(f"Total datapoints: {len(data)}")
+
+print("Table values")
+print([predicted_und, predicted_d])
+print([actual_und, actual_d])
+
+chi_square_test_statistic, p_value = stats.chisquare([predicted_und, predicted_d], [actual_und, actual_d])
+print(f'Chi square test statistic: {str(chi_square_test_statistic)}')
+print(f'p-value: {str(p_value)}')
+print(f'Critical value: {stats.chi2.ppf(1 - 0.05, df=1)}')
