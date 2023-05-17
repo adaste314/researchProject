@@ -21,6 +21,7 @@ try:
         with connection.cursor() as cursor:
             try:
                 cursor.execute("""CREATE TABLE posts(
+                    type INT,
                     link LONGBLOB,
                     words LONGBLOB
                     )""")
