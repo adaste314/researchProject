@@ -1,42 +1,25 @@
-import nltk.corpus
-from nltk.corpus import words as wds
+import nltk
 import parsing
-import mysql.connector
-from mysql.connector import connect, Error
+from collections import Counter
 
 nltk.download('words')
-username, passkey = parsing.username, parsing.passkey
 
-try:
-    with connect(
-        host="Serge-HP13",
-        user=username,
-        password=passkey,
-        database='data'
-    ) as connection:
-        with connection.cursor() as cursor:
-            d_posts, und_posts = parsing.d_posts, parsing.und_posts
-            words = []
-            all_posts = d_posts + und_posts
-            for i in all_posts:
-                words += i.split(" ")
-            words = set(words)
+d_posts, und_posts = parsing.d_posts, parsing.und_posts
+all_posts = d_posts + und_posts
 
-            english_words = set(wds.words())
-            common_words = ['am', 'is', 'are', 'was', 'were', 'being', 'been', 'and', 'be', 'have', 'has', 'had', 'do',
-                            'does',
-                            'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could', 'the', 'a',
-                            'an']
-            clean_words = [''.join(filter(str.isalpha, word)) for word in words]
-            filtered_words = [i.lower() for i in clean_words if
-                              i.lower() in english_words and i.lower() not in common_words]
-            words = [(word, filtered_words.count(word) / len(filtered_words)) for word in filtered_words]
-            cursor.executemany("INSERT INTO words(word, weighting) VALUES (%s, %f)", words)
-            cursor.execute("SELECT link FROM posts")
-            for i in cursor.fetchall():
-                cursor.execute("INSERT INTO posts(words) VALUES %s", )
+# Combine all posts and split into words
+words = []
+for post in all_posts:
+    words.extend(post.split())
 
-            connection.commit()
+# Filter and clean the words
+english_words = set(nltk.corpus.words.words())
+common_words = set(['am', 'is', 'are', 'was', 'were', 'being', 'been', 'and', 'be', 'have', 'has', 'had', 'do',
+                    'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could',
+                    'the', 'a', 'an'])
+filtered_words = [word.lower() for word in words if word.isalpha() and word.lower() in english_words and word.lower() not in common_words]
 
-except Error as e:
-    print(e)
+# Count the occurrence of each word and calculate relative frequency
+word_counts = Counter(filtered_words)
+total_words = len(filtered_words)
+words = [(word, count / total_words) for word, count in word_counts.items()]

@@ -2,7 +2,8 @@ import math
 import random
 import filtering
 
-d_posts, und_posts, all_posts, words = filtering.d_posts, filtering.und_posts, filtering.all_posts, filtering.words
+d_posts, und_posts, words = filtering.d_posts, filtering.und_posts, filtering.words
+all_posts = d_posts + und_posts
 
 train_posts = random.sample(all_posts, int(.8 * len(all_posts)))
 test_posts = [i for i in all_posts if i not in train_posts]

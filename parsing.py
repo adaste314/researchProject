@@ -1,54 +1,86 @@
-import requests as req
-from bs4 import BeautifulSoup as bs
-import random
-import mysql.connector
-from mysql.connector import connect, Error
-import database_creation
+import requests
+from bs4 import BeautifulSoup
+import threading
 
-username, passkey = database_creation.username, database_creation.passkey
-try:
-    with connect(
-        host="Serge-HP13",
-        user=username,
-        password=passkey,
-        database='data'
-    ) as connection:
-        with connection.cursor() as cursor:
-            d_posts, und_posts = [], []
-            pages_total = int(input("PAGES TO PARSE: "))
+d_posts, und_posts = [], []
+pages_total = 50
 
-            for i in range(pages_total):
-                page = req.get("https://www.psychforums.com:443/borderline-personality/?start=" + str(i * 40)).text
-                parser = bs(page, 'html.parser')
-                d_posts += list(parser.find(id="wrap").find_all("li", class_="row bg1")) + list(
-                    parser.find(id="wrap").find_all("li", class_="row bg2"))
+def extract_posts(url, class_type, class_name, result_list):
+    while True:
+        try:
+            page = requests.get(url).text
+            parser = BeautifulSoup(page, 'html.parser')
+            wrap_element = parser.find(id="wrap")
+            if wrap_element is not None:
+                posts = wrap_element.find_all(class_type, class_=class_name)
+                result_list.extend([str(post).split('href="')[1].split('"')[0] for post in posts])
+            else:
+                posts = parser.find_all(class_type, class_=class_name)
+                result_list.extend([str(post).split('href="')[1].split('"')[0] for post in posts])
+            return
+        except requests.RequestException:
+            pass
 
-                page = req.get("https://www.psychforums.com:443/antisocial-personality/?start=" + str(i * 40)).text
-                parser = bs(page, 'html.parser')
-                d_posts += list(parser.find(id="wrap").find_all("li", class_="row bg1")) + list(
-                    parser.find(id="wrap").find_all("li", class_="row bg2"))
+def extract_content(url, class_name, result_list, index):
+    while True:
+        try:
+            page = requests.get(url).text
+            parser = BeautifulSoup(page, 'html.parser')
+            content_element = parser.find('div', class_=class_name)
+            if content_element is not None:
+                result_list[index] = str(content_element).split('">')[1].split('</')[0]
+            return
+        except requests.RequestException:
+            pass
 
+# Create thread lists for post extraction
+threads_d_posts = []
+threads_und_posts = []
 
-                page = req.get("https://www.gardening-forums.com/forums/general-gardening-talk.5/page-" + str(i)).text
-                parser = bs(page, 'html.parser')
-                und_posts += list(parser.find(id="top").find_all("div", class_="structItem-title"))
+# Extract d_posts from Psych Forums using threads
+for i in range(pages_total):
+    url = "https://www.psychforums.com:443/borderline-personality/?start=" + str(i * 40)
+    thread = threading.Thread(target=extract_posts, args=(url, "li", "row bg1", d_posts))
+    threads_d_posts.append(thread)
+    thread.start()
 
-            d_posts = [str(i).split('href="')[1].split('"')[0] for i in d_posts]
-            und_posts = ["https://www.gardening-forums.com/" + str(i).split('href="')[1].split('"')[0] for i in und_posts]
-            cursor.executemany("INSERT INTO posts(type, link) VALUES (0, %s)", und_posts)
-            cursor.executemany("INSERT INTO posts(type, link) VALUES (1, %s)", d_posts)
+    thread = threading.Thread(target=extract_posts, args=(url, "li", "row bg2", d_posts))
+    threads_d_posts.append(thread)
+    thread.start()
 
-            for i in d_posts:
-                parser = bs(req.get(i).text, 'html.parser')
-                d_posts[d_posts.index(i)] = str(parser.find('div', class_="content")).split('">')[1].split('</')[0]
+# Extract und_posts from Gardening Forum using threads
+for i in range(pages_total):
+    url = "https://www.gardening-forums.com/forums/general-gardening-talk.5/page-" + str(i)
+    thread = threading.Thread(target=extract_posts, args=(url, "div", "structItem-title", und_posts))
+    threads_und_posts.append(thread)
+    thread.start()
 
-            for i in und_posts:
-                parser = bs(req.get(i).text, 'html.parser')
-                und_posts[und_posts.index(i)] = " ".join(str(parser.find('div', class_="bbWrapper")).split('"'))
+# Wait for all threads to complete
+for thread in threads_d_posts:
+    thread.join()
 
-            cursor.execute('DELETE FROM posts WHERE COUNT(link) > 1 ORDER BY link')
-            connection.commit()
+for thread in threads_und_posts:
+    thread.join()
 
-except Error as e:
-    print(e)
+# Create thread lists for content extraction
+threads_d_content = []
+threads_und_content = []
 
+# Extract content for d_posts using threads
+for i, url in enumerate(d_posts):
+    thread = threading.Thread(target=extract_content, args=(url, "content", d_posts, i))
+    threads_d_content.append(thread)
+    thread.start()
+
+# Extract content for und_posts using threads
+for i, url in enumerate(und_posts):
+    thread = threading.Thread(target=extract_content, args=("https://www.gardening-forums.com/" + url, "bbWrapper", und_posts, i))
+    threads_und_content.append(thread)
+    thread.start()
+
+# Wait for all threads to complete
+for thread in threads_d_content:
+    thread.join()
+
+for thread in threads_und_content:
+    thread.join()
