@@ -1,7 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 import threading
+import time
 
+t = time.time()
 d_posts, und_posts = [], []
 pages_total = 50
 
@@ -21,15 +23,16 @@ def extract_posts(url, class_type, class_name, result_list):
         except requests.RequestException:
             pass
 
-def extract_content(url, class_name, result_list, index):
+def extract_content(url, class_type, class_name, result_list, index):
     while True:
         try:
             page = requests.get(url).text
             parser = BeautifulSoup(page, 'html.parser')
-            content_element = parser.find('div', class_=class_name)
+            content_element = parser.find(class_type, class_=class_name)
             if content_element is not None:
                 result_list[index] = str(content_element).split('">')[1].split('</')[0]
-            return
+                return
+
         except requests.RequestException:
             pass
 
@@ -68,13 +71,13 @@ threads_und_content = []
 
 # Extract content for d_posts using threads
 for i, url in enumerate(d_posts):
-    thread = threading.Thread(target=extract_content, args=(url, "content", d_posts, i))
+    thread = threading.Thread(target=extract_content, args=(url, "div", "content", d_posts, i))
     threads_d_content.append(thread)
     thread.start()
 
 # Extract content for und_posts using threads
 for i, url in enumerate(und_posts):
-    thread = threading.Thread(target=extract_content, args=("https://www.gardening-forums.com/" + url, "bbWrapper", und_posts, i))
+    thread = threading.Thread(target=extract_content, args=("https://www.gardening-forums.com/" + url, "div", "bbWrapper", und_posts, i))
     threads_und_content.append(thread)
     thread.start()
 
@@ -84,3 +87,5 @@ for thread in threads_d_content:
 
 for thread in threads_und_content:
     thread.join()
+
+print(f"PARSE TIME: {time.time() - t}")
