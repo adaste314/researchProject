@@ -1,8 +1,8 @@
 import math
 import random
-import filtering
+import scraping
 
-d_posts, und_posts, words = filtering.d_posts, filtering.und_posts, filtering.word_dict
+d_posts, und_posts, words = scraping.d_posts, scraping.und_posts, scraping.word_dict
 all_posts = d_posts + und_posts
 
 # Split the data into train and test sets

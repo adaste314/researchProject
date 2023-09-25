@@ -1,6 +1,5 @@
 import train_test
 import scipy.stats as stats
-import numpy as np
 
 data = train_test.data
 correct = train_test.correct
