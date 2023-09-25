@@ -67,3 +67,10 @@ for prediction, actual in data:
         actual_d += 1
     else:
         actual_und += 1
+
+    # After model training
+
+# Save the words and their weightings to a file (clearing it if it exists)
+with open("training_data.txt", "w") as file:
+    for word, weighting in words.items():
+        file.write(f"{word}: {weighting}\n")

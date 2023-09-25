@@ -56,3 +56,19 @@ total_words = sum(word_frequency.values())
 
 # Calculate word frequencies as ratios
 word_dict = {word: count / total_words for word, count in word_frequency.items()}
+
+# Load existing word frequencies from "training_data.txt" if it exists
+existing_word_dict = {}
+
+try:
+    with open("training_data.txt", "r") as file:
+        for line in file:
+            word, frequency = line.strip().split(": ")
+            existing_word_dict[word] = float(frequency)
+except FileNotFoundError:
+    existing_word_dict = {}
+
+# Update word frequencies from the existing data
+for word in word_dict:
+    if word in existing_word_dict:
+        word_dict[word] = existing_word_dict[word]
