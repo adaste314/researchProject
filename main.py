@@ -63,7 +63,7 @@ def update(update_data, root):
     prompt_window.geometry("500x500")
 
     # Create a label to instruct the user
-    label = tk.Label(prompt_window, text="Enter the text to be analyzed:\n(it can be a collection of multiple texts, and does not need a separator)")
+    label = tk.Label(prompt_window, text="Enter the text to be analyzed:\n(it can be a collection of multiple texts, and does not need a separator)\nNOTE: THE MORE TEXT, THE MORE ACCURATE THE PREDICTION")
     label.pack(pady=10)
 
     # Create a scalable text entry widget
@@ -74,7 +74,7 @@ def update(update_data, root):
     def submit_text():
         user_text = text_widget.get("1.0", tk.END)  # Get text from the widget
         if user_text:
-            prediction_label.config(text=f"Probability of diagnosis: {predict(user_text):.4f}")
+            prediction_label.config(text=f"Probability of diagnosis: {predict(user_text):.4f} ({predict(user_text)*100:.2f}%)")
 
     # Create a submit button
     submit_button = tk.Button(prompt_window, text="Submit", command=submit_text)
