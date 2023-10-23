@@ -1,53 +1,38 @@
-# import scipy.stats as stats
-#
-# data = train_test.data
-# correct = train_test.correct
-# predicted_und, predicted_d, actual_d, actual_und = train_test.predicted_und, train_test.predicted_d, train_test.actual_d, train_test.actual_und
-# fn, tn, fp, tp = train_test.fn, train_test.tn, train_test.fp, train_test.tp
-#
-# print(f"Percent correct: {correct / len(data) * 100}%")
-# print(f"Total datapoints: {len(data)}")
-#
-# print(f"Actual Positives: {actual_d} | Actual Negatives: {actual_und} | Predicted Positives: {predicted_d} | Predicted Negatives: {predicted_und}")
-# print(f"True Positives: {tp} | False Negatives: {fn} | False Positives: {fp} | True Negatives: {tn}")
-#
-# chi_square_test_statistic, p_value = stats.chisquare([predicted_und, predicted_d], [actual_und, actual_d])
-# print(f'Chi square test statistic: {str(chi_square_test_statistic)}')
-# print(f'p-value: {str(p_value)}')
-# print(f'Critical value: {stats.chi2.ppf(1 - 0.05, df=1)}')
-
 import tkinter as tk
 import importlib
 import math
 
-words = {}
-
-# Open the file for reading
-with open("training_data.txt", "r") as file:
-    # Read each line in the file
-    for line in file:
-        # Split the line into word and weighting using ':' as the separator
-        parts = line.strip().split(':')
-        if len(parts) == 2:
-            word = parts[0].strip()  # Get the word (trimmed of leading/trailing spaces)
-            weighting = float(parts[1].strip())  # Get the weighting (converted to float)
-            words[word] = weighting  # Add the word and weighting to the dictionary
-
-def predict(text):
+def predict(text, words):
     predict = 0
-    for word in text.split(" "):
+    for word in set(text.split(" ")):
         if word in words:
             predict += words[word]
+            print(f"{word}: {words[word]}")
 
-    predict = 1 / (1 + math.exp(-predict))
+    print(f"sum: {predict}")
+    predict = 1 / (1 + math.exp(-0.5 * predict))
+    print(f"prediction: {predict}")
     return predict
 
 # Function to update the training data
 def update(update_data, root):
+    words = {}
     if update_data:
         try:
             import train_test  # Import the other module if "Yes" is selected
             importlib.reload(train_test)  # Reload the module in case it has already been imported
+
+            # Open the file for reading
+            with open("training_data.txt", "r") as file:
+                # Read each line in the file
+                for line in file:
+                    # Split the line into word and weighting using ':' as the separator
+                    parts = line.strip().split(':')
+                    if len(parts) == 2:
+                        word = parts[0].strip()  # Get the word (trimmed of leading/trailing spaces)
+                        weighting = float(parts[1].strip())  # Get the weighting (converted to float)
+                        words[word] = weighting  # Add the word and weighting to the dictionary
+
             print("Training data updated.")
         except ImportError:
             print("Error importing the module.")
@@ -63,7 +48,7 @@ def update(update_data, root):
     prompt_window.geometry("500x500")
 
     # Create a label to instruct the user
-    label = tk.Label(prompt_window, text="Enter the text to be analyzed:\n(it can be a collection of multiple texts, and does not need a separator)\nNOTE: THE MORE TEXT, THE MORE ACCURATE THE PREDICTION")
+    label = tk.Label(prompt_window, text="Enter the text to be analyzed:\n(it can be a collection of multiple texts, and does not need a separator)\nNOTE: THE AMOUNT OF TEXT CAN ALTER THE ACCURACY, FOR OPTIMAL RESULTS, EXPERIMENT WITH MULTIPLE TEXT LENGTHS")
     label.pack(pady=10)
 
     # Create a scalable text entry widget
@@ -74,13 +59,13 @@ def update(update_data, root):
     def submit_text():
         user_text = text_widget.get("1.0", tk.END)  # Get text from the widget
         if user_text:
-            prediction_label.config(text=f"Probability of diagnosis: {predict(user_text):.4f} ({predict(user_text)*100:.2f}%)")
+            prediction_label.config(text=f"Probability of diagnosis: {predict(user_text, words):.4f} ({predict(user_text, words)*100:.2f}%)")
 
     # Create a submit button
     submit_button = tk.Button(prompt_window, text="Submit", command=submit_text)
     submit_button.pack()
 
-    prediction_label = tk.Label(prompt_window, text="\nProbability of diagnosis: ")
+    prediction_label = tk.Label(prompt_window, text="\nProbability of diagnosis: ___")
     prediction_label.pack()
 
     prompt_window.mainloop()

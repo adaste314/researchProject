@@ -12,12 +12,12 @@ test_posts = [post for post in all_posts if post not in train_posts]
 # Train the model
 for post in train_posts:
     predict = 0
-    for word in post.split(" "):
+    for word in set(post.split(" ")):
         if word in words:
             predict += words[word]
 
     actual = int(post in d_posts)
-    predict = 1 / (1 + math.exp(-predict))
+    predict = 1 / (1 + math.exp(-0.5 * predict))
     change = predict * (1 - predict)
 
     for word in post.split(" "):
@@ -32,12 +32,12 @@ for post in train_posts:
 data = []
 for post in test_posts:
     predict = 0
-    for word in post.split(" "):
+    for word in set(post.split(" ")):
         if word in words:
             predict += words[word]
 
     actual = int(post in d_posts)
-    predict = round(1 / (1 + math.exp(-predict)))
+    predict = round(1 / (1 + math.exp(-0.5 * predict)))
     data.append((predict, actual))
 
 # Evaluate the model
